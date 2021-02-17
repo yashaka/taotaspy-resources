@@ -1,0 +1,8 @@
+README.md
+setup.py
+todomvc_tests/__init__.py
+todomvc_tests.egg-info/PKG-INFO
+todomvc_tests.egg-info/SOURCES.txt
+todomvc_tests.egg-info/dependency_links.txt
+todomvc_tests.egg-info/requires.txt
+todomvc_tests.egg-info/top_level.txt

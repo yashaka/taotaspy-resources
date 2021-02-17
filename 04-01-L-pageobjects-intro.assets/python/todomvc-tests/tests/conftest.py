@@ -1,0 +1,99 @@
+import pytest
+from selene import have
+from selene.support.shared import browser
+
+
+def pytest_addoption(parser):
+    parser.addoption('--base_url', default='http://todomvc4tasj.herokuapp.com/', action='store')
+    parser.addoption('--timeout', default=6, type=float, action='store')
+    parser.addoption('--save_page_source_on_failure', default=True, type=bool, action='store')
+
+
+@pytest.fixture(scope='function', autouse=True)
+def browser_setup(request):
+    def option(name):
+        return request.config.getoption(f'--{name}')
+
+    browser.config.base_url = option('base_url')
+    browser.config.timeout = option('timeout')
+    browser.config.save_page_source_on_failure = \
+        option('save_page_source_on_failure')
+    browser.config.set_value_by_js = True
+
+
+# @pytest.fixture(scope='function', autouse=True)
+# @pytest.fixture
+# def with_cleared_storage_after():
+#
+#     yield
+#
+#     browser.clear_local_storage()
+
+
+def open_app():
+    browser.open('') \
+        .should(have.js_returned(True,
+             'return ($._data($("#clear-completed").get(0), "events")'
+             '.hasOwnProperty("click") && '
+             '(Object.keys(require.s.contexts._.defined).length === 39))'))
+
+
+@pytest.fixture
+def open_fresh_app():
+    if browser.matching(have.url_containing('todomvc')):
+        browser.clear_local_storage()
+        open_app()
+    else:
+        open_app()
+
+
+@pytest.fixture
+def clear_data_after_each_test():
+
+    yield
+
+    browser.clear_local_storage()
+
+
+# @pytest.mark.usefixtures('open_app', 'clear_data_after_each_test')
+@pytest.mark.usefixtures('open_fresh_app')
+class AtTodoMvcWithClearedStorageAfterEachTest:
+
+    todos = browser.all('#todo-list>li')
+
+    def open_todomvc(self):
+        browser.open('') \
+            .should(have.js_returned(True,
+                 'return ($._data($("#clear-completed").get(0), "events")'
+                 '.hasOwnProperty("click") && '
+                 '(Object.keys(require.s.contexts._.defined).length === 39))'))
+
+    def add(self, *texts):
+        for text in texts:
+            browser.element('#new-todo').type(text).press_enter()
+
+    def todos_should_be(self, *with_texts):
+        self.todos.should(have.exact_texts(*with_texts))
+
+    def todo(self, text):
+        return self.todos.element_by(have.exact_text(text))
+
+    def start_editing(self, text, new_text):
+        self.todo(text).double_click()
+        return self.todos.element_by(have.css_class('editing')) \
+            .element('.edit').set_value(new_text)
+
+    def edit(self, text, new_text):
+        self.start_editing(text, new_text).press_enter()
+
+    def cancel_edit(self, text, new_text):
+        self.start_editing(text, new_text).press_escape()
+
+    def toggle(self, text):
+        self.todo(text).element('.toggle').click()
+
+    def clear_completed(self):
+        browser.element('#clear-completed').click()
+
+    def delete(self, text):
+        self.todo(text).hover().element('.destroy').click()
